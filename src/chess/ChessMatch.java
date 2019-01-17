@@ -1,5 +1,6 @@
 package chess;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ public class ChessMatch {
 	private boolean check;
 	private boolean checkMate;
 	private ChessPiece enPassantVulnerable;
+	private ChessPiece promoted;
 
 	private List<Piece> piecesOnTheBoard = new ArrayList<>();
 	private List<Piece> capturedPieces = new ArrayList<>();
@@ -65,6 +67,10 @@ public class ChessMatch {
 		return enPassantVulnerable;
 	}
 
+	public ChessPiece getPromoted() {
+		return promoted;
+	}
+
 	public boolean[][] possibleMoves(ChessPosition sourcePosition) {
 		Position position = sourcePosition.toPosition();
 		this.validateSourcePosition(position);
@@ -85,6 +91,17 @@ public class ChessMatch {
 
 		ChessPiece movedPiece = (ChessPiece) board.piece(target);
 
+		// #specialmove promotion 
+		
+		this.promoted = null;
+		
+		if(movedPiece instanceof Pawn) {
+			if((movedPiece.getColor() == Color.WHITE && target.getRow() == 0) || (movedPiece.getColor() == Color.BLACK && target.getRow() == 7)) {
+				this.promoted = (ChessPiece) board.piece(target);
+				this.promoted = replacePromotedPiece("Q");
+			}
+		}
+		
 		check = (this.testCheck(this.opponent(currentPlayer))) ? true : false;
 
 		if (this.testeCheckMate(opponent(this.currentPlayer))) {
@@ -103,6 +120,32 @@ public class ChessMatch {
 		}
 
 		return (ChessPiece) capturedPiece;
+	}
+	
+	public ChessPiece replacePromotedPiece (String type) {
+		if(this.promoted == null) {
+			throw new IllegalStateException("There is no piece to be promoted");
+		}
+		if(!type.equalsIgnoreCase("N") && !type.equalsIgnoreCase("Q") && !type.equalsIgnoreCase("R") && !type.equalsIgnoreCase("B")) {
+			throw new InvalidParameterException("");
+		}
+		
+		Position pos = this.promoted.getChessPosition().toPosition();
+		Piece p = board.removePiece(pos);
+		this.piecesOnTheBoard.remove(p);
+		
+		ChessPiece newPiece = this.newPiece(type, this.promoted.getColor());
+		board.placePiece(newPiece, pos);
+		this.piecesOnTheBoard.add(newPiece);
+		
+		return newPiece;
+	}
+	
+	private ChessPiece newPiece(String type, Color color) {
+		if(type.equalsIgnoreCase("Q")) return new Queen(this.board, color);
+		if(type.equalsIgnoreCase("R")) return new Rook(this.board, color);
+		if(type.equalsIgnoreCase("B")) return new Bishop(this.board, color);
+		return new Knight(this.board, color);
 	}
 
 	private Piece makeMove(Position source, Position target) {
