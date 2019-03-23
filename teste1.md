@@ -1,2 +1,2 @@
-- [ ] aaa
-- [ ] bbb
+- [x] aaa
+- [x] bbb
